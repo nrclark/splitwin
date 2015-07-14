@@ -88,7 +88,8 @@ class ParseSetupIni(object):
 
         return listings
 
-    def sanitize_listing(self, listing, add_current=False, strip_prev=True):
+    def sanitize_listing(self, listing, add_current=False, strip_prev=True,
+                         strip_test=True):
         """ Sanitizes a listing extracted from a Cygwin setup.ini file.
         This routine turns quoted strings into unquoted lines. Multi-line
         strings are joined if necessary.
@@ -97,7 +98,7 @@ class ParseSetupIni(object):
         replaced by a single space.
 
         Optionally, this routine can also add the '[current]' tag to a data
-        field, or it can delete the [prev] tags. """
+        field, or it can delete the [prev] and/or [test] tags. """
 
         listing = listing + '\n'
         if add_current:
@@ -122,6 +123,9 @@ class ParseSetupIni(object):
                 flags=re.DOTALL)
 
         listing = re.sub('[ \t]+', ' ', listing).strip()
+
+        if strip_test and listing.find('\n[test]') != -1:
+            listing = listing[0:listing.find('\n[test]')] + '\n'
 
         if strip_prev and listing.find('\n[prev]') != -1:
             listing = listing[0:listing.find('\n[prev]')] + '\n'
