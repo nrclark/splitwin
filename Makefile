@@ -59,17 +59,18 @@ all: $(foreach x,$(PACKAGES),out/$(x).ipk)
 %/install: setup.shelf
 	@mkdir -p $(dir $@)
 	./extract_control.py --shelf=$< -r -i $* > $(dir $@)install
+	touch -c $@
 
-	touch $@
-
-%/data.tar.gz: %/data.tar.xz %/install
+%/data.tar.gz: %/install
 	export FILENAME=`cat $(dir $@)install | grep 'File:' | sed "s/^File[:] //g"` && \
+	export LOCALFILE=`echo "$$FILENAME" | sed -E "s@^.+[/]@@g"` && \
 	export CHECKSUM=`cat $(dir $@)install | grep 'Checksum:' | sed "s/^Checksum[:] //g"` && \
-	wget "$(MIRROR_URL)/$$FILENAME" -O $*/$$FILENAME && \
-	echo "$$CHECKSUM $*/$$FILENAME" | sha512sum -c - && \
-	cd $* && ../smart_extract.sh $$FILENAME
-	xz -d -f $*/data.tar.xz
-	gzip -f $*/data.tar
+	wget "$(MIRROR_URL)/$$FILENAME" -O "$*/$$LOCALFILE" && \
+	echo "$$CHECKSUM $*/$$LOCALFILE" | sha512sum -c - && \
+	cd $* && ../smart_extract.sh "$$LOCALFILE" && \
+	mv `echo "$$LOCALFILE" | sed -E 's/[.][^.]+$$//g'` data.tar
+	gzip -f $(dir $@)data.tar
+	touch -c $@
 
 %.ipk: %/data.tar.gz %/control.tar.gz %/debian-binary
 	cd $* && tar cf $(abspath $@) $(notdir $^)
