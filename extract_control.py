@@ -2,17 +2,41 @@
 
 import re
 import textwrap
+import argparse
+import shelve
+import sys
 
 
-class setup_file(object):
+class ParseSetupIni(object):
 
-    def __init__(self, filename='setup.ini'):
-        self.filename = filename
-        self.file = open(filename, 'rb')
-        self.contents = self.file.read()
-        self.contents = self.sanitize_contents(self.contents)
-        self.arch = self.get_architecture(self.contents)
-        self.maintainer = 'nomaintainer@no-email.com'
+    def __init__(self, filename='setup.ini', shelf='setup.shelf', cached=False):
+        if cached:
+            db = shelve.open(shelf)
+            self.filename = db['filename']
+            self.arch = db['arch']
+            self.maintainer = db['maintainer']
+            self.entries = db['entries']
+            self.packages = db['packages']
+        else:
+            self.filename = filename
+            myfile = open(filename, 'rb')
+            self.contents = myfile.read()
+            self.contents = self.sanitize_contents(self.contents)
+            self.arch = self.get_architecture(self.contents)
+            self.maintainer = 'nomaintainer@no-email.com'
+            self.listings = self.split_listings(self.contents)
+
+            dict_list = [self.read_listing(x) for x in self.listings]
+            self.packages = [x['name'] for x in dict_list]
+            self.entries = {x['name']: x for x in dict_list}
+
+            db = shelve.open(shelf, 'n')
+            db['packages'] = self.packages
+            db['filename'] = self.filename
+            db['arch'] = self.arch
+            db['maintainer'] = self.maintainer
+            db['entries'] = self.entries
+            db.close()
 
     def sanitize_contents(self, contents):
         """ Sanitizes the contents of a Cygwin 'setup.ini' field. All
@@ -35,10 +59,8 @@ class setup_file(object):
         return contents
 
     def test(self):
-        print "Total @ symbols:", self.contents.count('@')
-        print "Fresh @ symbols:", len(re.findall("\n[ \t\n]*[@]", self.contents))
-        print "Listing count: ", len(self.split_listings(self.contents))
-        print self.split_listings(self.contents)[-1]
+        print "Listing count: ", len(self.entries)
+        print self.entries[-1]
 
     def get_architecture(self, contents):
         """ Creates an architecture string to use in the output 'control'
@@ -174,7 +196,11 @@ class setup_file(object):
         server. """
 
         source = listing_dict['source']
-        filename, size, checksum = source.strip().split()
+
+        if source != '':
+            filename, size, checksum = source.strip().split()
+        else:
+            filename, size, checksum = "NONE", "NONE", "NONE"
         lines = []
 
         lines.append(['File', filename])
@@ -208,23 +234,88 @@ class setup_file(object):
         return result
 
 
-def main():
-    myfile = setup_file()
-    myfile.test()
-    listings = myfile.split_listings(myfile.contents)
-    listings = listings[0:1]
+DESCRIPTION = """Cygwin INI parser. Reads a Cygwin setup.ini file and splits
+up all of the entries into Python dicts. Writes one of:
+   - List of entries in Setup.ini
+   - Control file for packaging as a .opk
+   - Install file for scripted download of binary files
+   - Source file for scripted download of source files
+to standard out.
 
-    listings = [myfile.sanitize_listing(x) for x in listings]
-    for x in listings:
-        print x
-        print "----------------"
-        print myfile.read_listing(x)
-        print "----------------"
-        print myfile.create_control(myfile.read_listing(x))
-        print "----------------"
-        print myfile.create_source(myfile.read_listing(x))
-        print "----------------"
-        print myfile.create_install(myfile.read_listing(x))
+Optionally, this utility can reload pre-parsed results from a shelf file
+that it creates while parsing setup.ini.
+"""
+
+EPILOG = """Copyright 2015. Written by Nicholas Clark."""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.RawDescriptionHelpFormatter
+    parser.description = DESCRIPTION
+    parser.epilog = EPILOG
+    parser.add_argument('-r', '--reload', default=False, action='store_true',
+                        help='Reload an already-parsed database from the' +
+                        ' shelf file)')
+
+    parser.add_argument('--shelf', default='setup.shelf',
+                        help='Shelf file to use for storing parsed-results' +
+                        " (default: setup.shelf)")
+
+    parser.add_argument('--ini', default='setup.ini',
+                        help="Ini file to parse, if 'reload' is false." +
+                        " (default: setup.ini)")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-e', '--entries', default=False, action='store_true',
+                       help='Generates a list of all packages.')
+
+    group.add_argument('-c', '--control', default='',
+                       help="Generates a 'control' file for the target" +
+                       " package.")
+
+    group.add_argument('-s', '--source', default='',
+                       help="Generates a 'source' file for the target" +
+                       " package.")
+
+    group.add_argument('-i', '--install', default='',
+                       help="Generates an 'install' file for the target" +
+                       " package.")
+
+    return parser
+
+
+def parse_args(parser):
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    parser = create_parser()
+    args = parse_args(parser)
+
+    if args.reload:
+        mySetup = ParseSetupIni(filename='', shelf=args.shelf, cached=True)
+    else:
+        mySetup = ParseSetupIni(filename=args.ini, shelf=args.shelf)
+
+    if args.entries:
+        for package in mySetup.packages:
+            sys.stdout.write(package + '\n')
+
+    if args.control:
+        entry = mySetup.entries[args.control]
+        sys.stdout.write(mySetup.create_control(entry))
+
+    if args.source:
+        entry = mySetup.entries[args.source]
+        sys.stdout.write(mySetup.create_source(entry))
+
+    if args.install:
+        entry = mySetup.entries[args.install]
+        sys.stdout.write(mySetup.create_install(entry))
+
+    return
 
 if __name__ == '__main__':
     main()
