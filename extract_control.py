@@ -303,21 +303,25 @@ def main():
     else:
         mySetup = ParseSetupIni(filename=args.ini, shelf=args.shelf)
 
-    if args.entries:
-        for package in mySetup.packages:
-            sys.stdout.write(package + '\n')
+    try:
+        if args.entries:
+            for package in mySetup.packages:
+                sys.stdout.write(package + '\n')
 
-    if args.control:
-        entry = mySetup.entries[args.control]
-        sys.stdout.write(mySetup.create_control(entry))
+        if args.control:
+            entry = mySetup.entries[args.control]
+            sys.stdout.write(mySetup.create_control(entry))
 
-    if args.source:
-        entry = mySetup.entries[args.source]
-        sys.stdout.write(mySetup.create_source(entry))
+        if args.source:
+            entry = mySetup.entries[args.source]
+            sys.stdout.write(mySetup.create_source(entry))
 
-    if args.install:
-        entry = mySetup.entries[args.install]
-        sys.stdout.write(mySetup.create_install(entry))
+        if args.install:
+            entry = mySetup.entries[args.install]
+            sys.stdout.write(mySetup.create_install(entry))
+
+    except IOError:
+        sys.exit(0)
 
     return
 
