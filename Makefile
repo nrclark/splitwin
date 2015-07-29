@@ -46,7 +46,7 @@ INTERMEDIATES := /control/control /control/postinst
 INTERMEDIATES += /control/prerm /install /data.tar.gz /control.tar.gz
 INTERMEDIATES += .ipk /debian-binary
 .INTERMEDIATE: $(foreach x,$(INTERMEDIATES),$(TARGET)$x)
-.DELETE_ON_ERROR:
+#.DELETE_ON_ERROR:
 
 SERVER_FILE := $(strip $(shell \
 	./extract_control.py --shelf=setup.shelf -r -i $(TARGET) | \

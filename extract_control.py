@@ -168,7 +168,7 @@ class ParseSetupIni(object):
         section = listing_dict['category']
 
         package = listing_dict['name'].lower()
-        package = re.sub('[^a-z0-9.+-]', '-', package)
+        package = re.sub('[^_a-z0-9.+-]', '-', package)
 
         description = listing_dict['sdesc'] + '\n '
         description += '\n '.join(textwrap.wrap(listing_dict['ldesc'], 60))
