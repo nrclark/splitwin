@@ -1,0 +1,28 @@
+#!/bin/dash
+
+set -e
+
+ETC=/etc
+TEMPDIR=/temp
+PACKAGE=@PACKAGE@
+INSTALLFILE=@INSTALLFILE@
+
+TEMP1="$TEMPDIR"/"$PACKAGE".installed.db.1
+TEMP2="$TEMPDIR"/"$PACKAGE".installed.db.2
+RETCODE=1
+
+finish () {
+    rm -f $TEMP1
+    rm -f $TEMP2
+    exit $RETCODE
+}
+
+trap finish EXIT
+
+cp $ETC/setup/installed.db $TEMP1
+sed -i "/^$PACKAGE /d" $TEMP1
+echo "$PACKAGE $INSTALLFILE 0" >> $TEMP1
+cat $TEMP1 | sort | uniq > $TEMP2
+cp $TEMP2 $ETC/setup/installed.db
+date +"%s" > $ETC/timestamp
+RETCODE=0

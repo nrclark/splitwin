@@ -14,7 +14,7 @@ setup.shelf: setup.ini
 	./extract_control.py --ini=$< --shelf=$@
 
 package_list.mk: setup.shelf
-	printf "PACKAGES :=" > $@
+	printf "PACKAGES := " > $@
 	./extract_control.py --shelf=$< -r -e | tr '\n' ' ' >> $@
 	printf "\n" >> $@
 
@@ -73,26 +73,31 @@ gzip -d -f $1))
 $(TARGET)/control/control: setup.shelf
 	@mkdir -p $(dir $@)
 	./extract_control.py --shelf=$< -r -c $(TARGET) > $@
+	chmod 644 $@
 
-$(TARGET)/control/postinst:
+$(TARGET)/control/postinst: postinst.template
 	@mkdir -p $(dir $@)
-	printf "#!/bin/sh\n\nexit 0;\n" > $@
-	chmod +x $@
+	cp $^ $@
+	sed -i "s/@PACKAGE@/$(TARGET)/g" $@
+	sed -i "s/@INSTALLFILE@/$(notdir $(SERVER_FILE))/g" $@
+	chmod 755 $@
 
 $(TARGET)/control/prerm:
 	@mkdir -p $(dir $@)
 	printf "#!/bin/sh\n\nexit 0;\n" > $@
-	chmod +x $@
+	chmod 755 $@
 
 $(TARGET)/control.tar.gz: $(TARGET)/control/postinst $(TARGET)/control/prerm
 $(TARGET)/control.tar.gz: $(TARGET)/control/control
 	@mkdir -p $(dir $@)
 	cd $(dir $@)control && tar cf $(abspath $@) $(notdir $^)
 	rm -r $(TARGET)/control
+	chmod 644 $@
 
 $(TARGET)/debian-binary:
 	@mkdir -p $(dir $@)
 	printf "2.0\n" > $@
+	chmod 644 $@
 
 $(TARGET)/data.tar.gz: setup.shelf
 	@mkdir -p $(dir $@)
@@ -105,17 +110,17 @@ $(TARGET)/data.tar.gz: setup.shelf
 	gzip -f $(TARGET)/$(LIST_FILE)
 	cd $(TARGET) && tar rf data.tar $(LIST_FILE).gz
 	gzip -f $(TARGET)/data.tar
+	chmod 644 $@
 	ls $@ && touch -c $@
 
 $(TARGET).ipk: $(TARGET)/data.tar.gz $(TARGET)/control.tar.gz
 $(TARGET).ipk: $(TARGET)/debian-binary
-	cd $(TARGET) && tar cf $(abspath $@) $(notdir $^)
+	cd $(TARGET) && ar r $(abspath $@) $(notdir $^)
 	ls $@ && touch -c $@
 	rm -r $(TARGET)
+	chmod 644 $@
 
 clean-$(TARGET):
 	rm -rf $(TARGET).ipk $(TARGET)
 
 endif
-
-

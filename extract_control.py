@@ -25,6 +25,7 @@ class ParseSetupIni(object):
             self.arch = self.get_architecture(self.contents)
             self.maintainer = 'nomaintainer@no-email.com'
             self.listings = self.split_listings(self.contents)
+            self.listings = [self.sanitize_listing(x) for x in self.listings]
 
             dict_list = [self.read_listing(x) for x in self.listings]
             self.packages = [x['name'] for x in dict_list]
@@ -76,7 +77,7 @@ class ParseSetupIni(object):
             key, value = line.split(': ')
             keys[key] = value
 
-        return keys['release'] + "-" + keys['arch']
+        return keys['arch']
 
     def split_listings(self, contents):
         """ Splits the contents of a Cygwin setup.ini file into separate
