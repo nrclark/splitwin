@@ -35,9 +35,9 @@ if [ "x$SCRIPTLIST" != "x" ]; then
 fi
 
 trap finish EXIT
+mkdir -p $TEMP1
 cp $ETC/setup/installed.db $TEMP1
 sed -i "/^$PACKAGE /d" $TEMP1
-echo "$PACKAGE $INSTALLFILE 0" >> $TEMP1
 cat $TEMP1 | sort | uniq > $TEMP2
 cp $TEMP2 $ETC/setup/installed.db
 date +"%s" > $ETC/setup/timestamp

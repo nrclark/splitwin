@@ -75,16 +75,28 @@ $(TARGET)/control/control: setup.shelf
 	./extract_control.py --shelf=$< -r -c $(TARGET) > $@
 	chmod 644 $@
 
-$(TARGET)/control/postinst: postinst.template
+$(TARGET)/control/postinst: postinst.template $(TARGET)/data.tar.gz
 	@mkdir -p $(dir $@)
-	cp $^ $@
+	cp $< $@
 	sed -i "s/@PACKAGE@/$(TARGET)/g" $@
 	sed -i "s/@INSTALLFILE@/$(notdir $(SERVER_FILE))/g" $@
+	SCRIPTLIST=`tar -tzf $(TARGET)/data.tar.gz |\
+	grep -E "^etc/postinstall/.+[.][a-z]*sh"` ;\
+	SCRIPTLIST=$$SCRIPTLIST `tar -tzf $(TARGET)/data.tar.gz |\
+	grep -E "^/?etc/postinstall/.+bat"` ;\
+	sed -i "s%@SCRIPTLIST@%$$SCRIPTLIST%g" $@
 	chmod 755 $@
 
-$(TARGET)/control/prerm:
+$(TARGET)/control/prerm: prerm.template $(TARGET)/data.tar.gz
 	@mkdir -p $(dir $@)
-	printf "#!/bin/sh\n\nexit 0;\n" > $@
+	cp $< $@
+	sed -i "s/@PACKAGE@/$(TARGET)/g" $@
+	sed -i "s/@INSTALLFILE@/$(notdir $(SERVER_FILE))/g" $@
+	SCRIPTLIST=`tar -tzf $(TARGET)/data.tar.gz |\
+	grep -E "^etc/preremove/.+[.][a-z]*sh"` ;\
+	SCRIPTLIST=$$SCRIPTLIST `tar -tzf $(TARGET)/data.tar.gz |\
+	grep -E "^/?etc/preremove/.+bat"` ;\
+	sed -i "s%@SCRIPTLIST@%$$SCRIPTLIST%g" $@
 	chmod 755 $@
 
 $(TARGET)/control.tar.gz: $(TARGET)/control/postinst $(TARGET)/control/prerm
