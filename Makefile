@@ -46,7 +46,7 @@ INTERMEDIATES := /control/control /control/postinst
 INTERMEDIATES += /control/prerm /install /data.tar.gz /control.tar.gz
 INTERMEDIATES += .ipk /debian-binary
 .INTERMEDIATE: $(foreach x,$(INTERMEDIATES),$(TARGET)$x)
-#.DELETE_ON_ERROR:
+.DELETE_ON_ERROR:
 
 SERVER_FILE := $(strip $(shell \
 	./extract_control.py --shelf=setup.shelf -r -i $(TARGET) | \
@@ -121,6 +121,10 @@ $(TARGET)/data.tar.gz: setup.shelf
 	tar tf $(TARGET)/data.tar > $(TARGET)/$(LIST_FILE)
 	gzip -f $(TARGET)/$(LIST_FILE)
 	cd $(TARGET) && tar rf data.tar $(LIST_FILE).gz
+	mkdir -p $(TARGET)/data.tar.temp
+	cd $(TARGET)/data.tar.temp && tar xf $(abspath $(TARGET)/data.tar)
+	cd $(TARGET)/data.tar.temp && \
+	tar cf $(abspath $(TARGET)/data.tar) --numeric-owner --owner=0 --group=0 `ls -A`
 	gzip -f $(TARGET)/data.tar
 	chmod 644 $@
 	ls $@ && touch -c $@
