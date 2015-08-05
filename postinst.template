@@ -14,8 +14,8 @@ TEMP2="$TEMPDIR"/"$PACKAGE".installed.db.2
 RETCODE=1
 
 finish () {
-    rm -f $TEMP1
-    rm -f $TEMP2
+    rm -rf $TEMP1
+    rm -rf $TEMP2
     exit $RETCODE
 }
 
@@ -35,6 +35,7 @@ if [ "x$SCRIPTLIST" != "x" ]; then
 fi
 
 trap finish EXIT
+mkdir -p "$TEMPDIR"
 cp $ETC/setup/installed.db $TEMP1
 sed -i "/^$PACKAGE /d" $TEMP1
 echo "$PACKAGE $INSTALLFILE 0" >> $TEMP1
